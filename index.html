@@ -31,15 +31,17 @@ const W = 800, H = 550;
 class TitleScene extends Phaser.Scene {
   constructor() { super('Title'); }
   create() {
+    this.started = false;
     this.cameras.main.setBackgroundColor('#0a0a0a');
     const t = this.add.text(W/2, 120, 'OVW SMASH', { fontSize: '64px', fontFamily: 'monospace', color: '#FFD700', stroke: '#FF4500', strokeThickness: 6 }).setOrigin(0.5);
     this.add.text(W/2, 180, '🤼 WRESTLING ARCADE 🤼', { fontSize: '18px', fontFamily: 'monospace', color: '#FF69B4' }).setOrigin(0.5);
-    const btn = this.add.text(W/2, 300, '[ START ]', { fontSize: '32px', fontFamily: 'monospace', color: '#00FF00', padding: { x: 20, y: 10 }, backgroundColor: '#222' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-    btn.on('pointerup', () => this.scene.start('Select'));
-    this.add.text(W/2, 420, 'Controls: Arrows=Move  Z=Strike  X=Grapple  C=Finisher', { fontSize: '14px', fontFamily: 'monospace', color: '#888' }).setOrigin(0.5);
+    this.add.text(W/2, 300, '[ START ]', { fontSize: '32px', fontFamily: 'monospace', color: '#00FF00', padding: { x: 20, y: 10 }, backgroundColor: '#222' }).setOrigin(0.5);
+    this.add.text(W/2, 360, '(Click or tap anywhere)', { fontSize: '14px', fontFamily: 'monospace', color: '#666' }).setOrigin(0.5);
+    this.add.text(W/2, 450, 'Controls: Arrows=Move  Z=Strike  X=Grapple  C=Finisher', { fontSize: '14px', fontFamily: 'monospace', color: '#888' }).setOrigin(0.5);
     this.tweens.add({ targets: t, scaleX: 1.05, scaleY: 1.05, yoyo: true, repeat: -1, duration: 800 });
-    this.input.keyboard.on('keydown', () => this.scene.start('Select'));
-    this.input.on('pointerup', () => this.scene.start('Select'));
+    const goToSelect = () => { if (!this.started) { this.started = true; this.scene.start('Select'); } };
+    this.input.keyboard.on('keydown', goToSelect);
+    this.input.on('pointerdown', goToSelect);
   }
 }
 
@@ -312,6 +314,7 @@ new Phaser.Game({
   height: H,
   scene: [TitleScene, SelectScene, FightScene, VictoryScene],
   parent: document.body,
+  input: { activePointers: 1 },
   scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH }
 });
 </script>
