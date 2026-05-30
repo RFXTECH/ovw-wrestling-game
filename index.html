@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>OVW SMASH</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #0a0a0a; overflow: hidden; font-family: monospace; }
+canvas { display: block; margin: 0 auto; }
+</style>
+</head>
+<body>
+<script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
+<script>
+const WRESTLERS = [
+  { name: 'Z-Force', title: 'Champion', power: 7, speed: 7, stamina: 7, technique: 7, color: 0xFFD700, bodyW: 40, bodyH: 60, accent: 0xFFA500 },
+  { name: 'Big Zo', title: 'Powerhouse', power: 10, speed: 4, stamina: 8, technique: 5, color: 0x8B0000, bodyW: 55, bodyH: 65, accent: 0xFF0000 },
+  { name: 'Star Rider', title: 'Highflyer', power: 5, speed: 10, stamina: 6, technique: 8, color: 0x00BFFF, bodyW: 35, bodyH: 55, accent: 0x87CEEB },
+  { name: 'Evil Z', title: 'Dirty Tricks', power: 6, speed: 7, stamina: 7, technique: 8, color: 0x4B0082, bodyW: 40, bodyH: 58, accent: 0x9400D3 },
+  { name: 'Freya The Slaya', title: 'Aggressive', power: 8, speed: 8, stamina: 6, technique: 6, color: 0xFF1493, bodyW: 36, bodyH: 56, accent: 0xFF69B4 },
+  { name: 'Crixus', title: 'Brawler', power: 9, speed: 5, stamina: 9, technique: 5, color: 0x556B2F, bodyW: 50, bodyH: 62, accent: 0x8FBC8F },
+  { name: 'Ca$h Flo', title: 'Technical', power: 5, speed: 7, stamina: 6, technique: 10, color: 0x00FF00, bodyW: 38, bodyH: 57, accent: 0x32CD32 },
+  { name: 'Mad Dog Martin', title: 'Unpredictable', power: 8, speed: 8, stamina: 5, technique: 4, color: 0xFF4500, bodyW: 44, bodyH: 60, accent: 0xFF6347 }
+];
+
+const W = 800, H = 500;
+
+class TitleScene extends Phaser.Scene {
+  constructor() { super('Title'); }
+  create() {
+    this.cameras.main.setBackgroundColor('#0a0a0a');
+    const t = this.add.text(W/2, 120, 'OVW SMASH', { fontSize: '64px', fontFamily: 'monospace', color: '#FFD700', stroke: '#FF4500', strokeThickness: 6 }).setOrigin(0.5);
+    this.add.text(W/2, 180, '🤼 WRESTLING ARCADE 🤼', { fontSize: '18px', fontFamily: 'monospace', color: '#FF69B4' }).setOrigin(0.5);
+    const btn = this.add.text(W/2, 300, '[ START ]', { fontSize: '32px', fontFamily: 'monospace', color: '#00FF00' }).setOrigin(0.5).setInteractive();
+    btn.on('pointerdown', () => this.scene.start('Select'));
+    this.add.text(W/2, 420, 'Controls: Arrows=Move  Z=Strike  X=Grapple  C=Finisher', { fontSize: '14px', fontFamily: 'monospace', color: '#888' }).setOrigin(0.5);
+    this.tweens.add({ targets: t, scaleX: 1.05, scaleY: 1.05, yoyo: true, repeat: -1, duration: 800 });
+    this.input.keyboard.on('keydown', () => this.scene.start('Select'));
+  }
+}
+
+class SelectScene extends Phaser.Scene {
+  constructor() { super('Select'); }
+  create() {
+    this.cameras.main.setBackgroundColor('#111');
+    this.add.text(W/2, 30, 'SELECT YOUR WRESTLER', { fontSize: '24px', fontFamily: 'monospace', color: '#FFD700' }).setOrigin(0.5);
+    this.selected = 0;
+    this.cards = [];
+    WRESTLERS.forEach((w, i) => {
+      const x = 100 + (i % 4) * 175, y = 100 + Math.floor(i / 4) * 160;
+      const c = this.add.container(x, y);
+      const bg = this.add.rectangle(0, 0, 150, 130, 0x222222).setStrokeStyle(2, w.color);
+      const body = this.add.rectangle(0, -15, w.bodyW * 0.6, w.bodyH * 0.6, w.color);
+      const head = this.add.circle(0, -15 - w.bodyH * 0.35, 10, w.accent);
+      const nm = this.add.text(0, 40, w.name, { fontSize: '11px', fontFamily: 'monospace', color: '#FFF' }).setOrigin(0.5);
+      const tt = this.add.text(0, 54, w.title, { fontSize: '9px', fontFamily: 'monospace', color: '#AAA' }).setOrigin(0.5);
+      c.add([bg, body, head, nm, tt]);
+      c.setSize(150, 130).setInteractive();
+      c.on('pointerdown', () => { this.selected = i; this.updateSelection(); });
+      this.cards.push({ container: c, bg });
+    });
+    this.updateSelection();
+    // Stats display
+    this.statsText = this.add.text(W/2, 430, '', { fontSize: '14px', fontFamily: 'monospace', color: '#0F0' }).setOrigin(0.5);
+    const go = this.add.text(W/2, 465, '[ FIGHT! ]', { fontSize: '22px', fontFamily: 'monospace', color: '#FF4500' }).setOrigin(0.5).setInteractive();
+    go.on('pointerdown', () => this.scene.start('Fight', { player: this.selected, ai: this.getAI() }));
+    this.input.keyboard.on('keydown-ENTER', () => this.scene.start('Fight', { player: this.selected, ai: this.getAI() }));
+  }
+  getAI() { let a; do { a = Phaser.Math.Between(0, 7); } while(a === this.selected); return a; }
+  updateSelection() {
+    this.cards.forEach((c, i) => c.bg.setStrokeStyle(i === this.selected ? 4 : 2, i === this.selected ? 0x00FF00 : WRESTLERS[i].color));
+    const w = WRESTLERS[this.selected];
+    this.statsText.setText(`POW:${w.power} SPD:${w.speed} STA:${w.stamina} TEC:${w.technique}`);
+  }
+}
+
+class FightScene extends Phaser.Scene {
+  constructor() { super('Fight'); }
+  init(data) { this.pIdx = data.player; this.aIdx = data.ai; }
+  create() {
+    this.cameras.main.setBackgroundColor('#1a0a2e');
+    const pw = WRESTLERS[this.pIdx], aw = WRESTLERS[this.aIdx];
+    // Ring
+    this.add.rectangle(W/2, H/2, 700, 350, 0x333333).setStrokeStyle(4, 0xFFFFFF);
+    this.add.rectangle(W/2, H/2, 700, 350).setStrokeStyle(2, 0xFF0000).setFillStyle();
+    // ropes
+    for (let i = 0; i < 3; i++) {
+      const y = H/2 - 140 + i * 140;
+      this.add.line(0, 0, W/2-350, y, W/2+350, y, 0xFFFFFF, 0.3).setOrigin(0);
+    }
+
+    // Create fighters
+    this.p1 = this.createFighter(200, 300, pw, true);
+    this.p2 = this.createFighter(600, 300, aw, false);
+
+    // HUD
+    this.drawHUD(pw, aw);
+
+    // Input
+    this.cursors = this.input.keyboard.createCursorKeys();
+    this.keys = this.input.keyboard.addKeys('Z,X,C,SPACE');
+
+    // State
+    this.p1.hp = 100; this.p2.hp = 100;
+    this.p1.stamina = 100; this.p2.stamina = 100;
+    this.p1.finisher = 0; this.p2.finisher = 0;
+    this.p1.stats = pw; this.p2.stats = aw;
+    this.p1.stunTimer = 0; this.p2.stunTimer = 0;
+    this.p1.attackCooldown = 0; this.p2.attackCooldown = 0;
+    this.gameOver = false;
+    this.pinState = null;
+
+    // AI timer
+    this.aiTimer = 0;
+    this.comboText = this.add.text(W/2, H/2 - 50, '', { fontSize: '28px', fontFamily: 'monospace', color: '#FF0' }).setOrigin(0.5).setDepth(10);
+  }
+
+  createFighter(x, y, w, isPlayer) {
+    const c = this.add.container(x, y);
+    const body = this.add.rectangle(0, 0, w.bodyW, w.bodyH, w.color);
+    const head = this.add.circle(0, -w.bodyH/2 - 12, 12, w.accent);
+    const arms = this.add.rectangle(0, -5, w.bodyW + 20, 8, w.accent);
+    const name = this.add.text(0, w.bodyH/2 + 10, isPlayer ? w.name : w.name, { fontSize: '10px', fontFamily: 'monospace', color: '#FFF' }).setOrigin(0.5);
+    c.add([body, head, arms, name]);
+    c.body_rect = body;
+    c.setSize(w.bodyW, w.bodyH);
+    return c;
+  }
+
+  drawHUD(pw, aw) {
+    // P1 bars
+    this.add.text(20, 15, pw.name, { fontSize: '12px', fontFamily: 'monospace', color: '#FFF' });
+    this.p1HpBar = this.add.rectangle(120, 20, 200, 16, 0x00FF00).setOrigin(0, 0.5);
+    this.add.rectangle(120, 20, 200, 16).setStrokeStyle(1, 0xFFF).setOrigin(0, 0.5).setFillStyle();
+    this.p1StBar = this.add.rectangle(120, 40, 150, 8, 0x00BFFF).setOrigin(0, 0.5);
+    this.p1FinBar = this.add.rectangle(120, 52, 100, 8, 0xFF4500).setOrigin(0, 0.5);
+    this.add.text(20, 46, 'FIN', { fontSize: '9px', fontFamily: 'monospace', color: '#FF4500' });
+    // P2 bars
+    this.add.text(W - 20, 15, aw.name, { fontSize: '12px', fontFamily: 'monospace', color: '#FFF' }).setOrigin(1, 0);
+    this.p2HpBar = this.add.rectangle(W - 120, 20, 200, 16, 0xFF0000).setOrigin(1, 0.5);
+    this.add.rectangle(W - 120, 20, 200, 16).setStrokeStyle(1, 0xFFF).setOrigin(1, 0.5).setFillStyle();
+    this.p2StBar = this.add.rectangle(W - 120, 40, 150, 8, 0x00BFFF).setOrigin(1, 0.5);
+    this.p2FinBar = this.add.rectangle(W - 120, 52, 100, 8, 0xFF4500).setOrigin(1, 0.5);
+  }
+
+  update(time, delta) {
+    if (this.gameOver) return;
+    if (this.pinState) { this.updatePin(delta); return; }
+
+    const dt = delta / 1000;
+    this.p1.attackCooldown = Math.max(0, this.p1.attackCooldown - dt);
+    this.p2.attackCooldown = Math.max(0, this.p2.attackCooldown - dt);
+    this.p1.stunTimer = Math.max(0, this.p1.stunTimer - dt);
+    this.p2.stunTimer = Math.max(0, this.p2.stunTimer - dt);
+
+    // Regen stamina
+    this.p1.stamina = Math.min(100, this.p1.stamina + dt * 8);
+    this.p2.stamina = Math.min(100, this.p2.stamina + dt * 8);
+
+    // Player movement
+    if (this.p1.stunTimer <= 0) {
+      const spd = this.p1.stats.speed * 25;
+      if (this.cursors.left.isDown) this.p1.x = Math.max(80, this.p1.x - spd * dt);
+      if (this.cursors.right.isDown) this.p1.x = Math.min(W - 80, this.p1.x + spd * dt);
+      if (this.cursors.up.isDown) this.p1.y = Math.max(100, this.p1.y - spd * dt);
+      if (this.cursors.down.isDown) this.p1.y = Math.min(H - 80, this.p1.y + spd * dt);
+    }
+
+    // Player attacks
+    if (this.p1.stunTimer <= 0 && this.p1.attackCooldown <= 0) {
+      if (Phaser.Input.Keyboard.JustDown(this.keys.Z)) this.doAttack(this.p1, this.p2, 'strike');
+      else if (Phaser.Input.Keyboard.JustDown(this.keys.X)) this.doAttack(this.p1, this.p2, 'grapple');
+      else if (Phaser.Input.Keyboard.JustDown(this.keys.C) && this.p1.finisher >= 100) this.doAttack(this.p1, this.p2, 'finisher');
+    }
+
+    // AI
+    this.aiTimer += dt;
+    if (this.aiTimer > 0.5 / (this.p2.stats.speed * 0.2) && this.p2.stunTimer <= 0) {
+      this.aiTimer = 0;
+      this.doAI();
+    }
+
+    // Update HUD
+    this.p1HpBar.setScale(Math.max(0, this.p1.hp / 100), 1);
+    this.p2HpBar.setScale(Math.max(0, this.p2.hp / 100), 1);
+    this.p1StBar.setScale(Math.max(0, this.p1.stamina / 100), 1);
+    this.p2StBar.setScale(Math.max(0, this.p2.stamina / 100), 1);
+    this.p1FinBar.setScale(Math.min(1, this.p1.finisher / 100), 1);
+    this.p2FinBar.setScale(Math.min(1, this.p2.finisher / 100), 1);
+
+    // Check KO
+    if (this.p1.hp <= 0) this.startPin(this.p2, this.p1, false);
+    if (this.p2.hp <= 0) this.startPin(this.p1, this.p2, true);
+  }
+
+  doAttack(attacker, defender, type) {
+    const dist = Phaser.Math.Distance.Between(attacker.x, attacker.y, defender.x, defender.y);
+    const range = type === 'grapple' ? 70 : type === 'finisher' ? 120 : 90;
+    if (dist > range) return;
+
+    let dmg = 0, stCost = 0;
+    if (type === 'strike') { dmg = attacker.stats.power * 1.5 + Math.random() * 5; stCost = 8; }
+    else if (type === 'grapple') { dmg = (attacker.stats.power + attacker.stats.technique) * 1.2; stCost = 15; }
+    else if (type === 'finisher') { dmg = attacker.stats.power * 4 + 20; stCost = 0; attacker.finisher = 0; }
+
+    if (attacker.stamina < stCost) return;
+    attacker.stamina -= stCost;
+    attacker.attackCooldown = 0.4;
+
+    // Technique dodge chance for defender
+    if (Math.random() < defender.stats.technique * 0.03 && type !== 'finisher') {
+      this.showText('DODGE!', defender.x, defender.y - 50, '#0FF');
+      return;
+    }
+
+    defender.hp -= dmg;
+    defender.stunTimer = type === 'finisher' ? 1.5 : 0.5;
+    attacker.finisher = Math.min(100, attacker.finisher + (type === 'strike' ? 12 : 18));
+
+    // Knockback
+    const angle = Phaser.Math.Angle.Between(attacker.x, attacker.y, defender.x, defender.y);
+    const kb = type === 'finisher' ? 60 : 25;
+    defender.x = Phaser.Math.Clamp(defender.x + Math.cos(angle) * kb, 80, W - 80);
+    defender.y = Phaser.Math.Clamp(defender.y + Math.sin(angle) * kb, 100, H - 80);
+
+    // Flash
+    this.tweens.add({ targets: defender.body_rect, alpha: 0.2, yoyo: true, duration: 80, repeat: 2 });
+    const labels = { strike: 'HIT!', grapple: 'SLAM!', finisher: '💥 FINISHER! 💥' };
+    this.showText(labels[type], defender.x, defender.y - 60, type === 'finisher' ? '#FF0' : '#FFF');
+  }
+
+  showText(msg, x, y, color) {
+    const t = this.add.text(x, y, msg, { fontSize: '18px', fontFamily: 'monospace', color }).setOrigin(0.5).setDepth(10);
+    this.tweens.add({ targets: t, y: y - 30, alpha: 0, duration: 600, onComplete: () => t.destroy() });
+  }
+
+  doAI() {
+    const dist = Phaser.Math.Distance.Between(this.p2.x, this.p2.y, this.p1.x, this.p1.y);
+    // Move toward player
+    if (dist > 80) {
+      const angle = Phaser.Math.Angle.Between(this.p2.x, this.p2.y, this.p1.x, this.p1.y);
+      const spd = this.p2.stats.speed * 8;
+      this.p2.x = Phaser.Math.Clamp(this.p2.x + Math.cos(angle) * spd, 80, W - 80);
+      this.p2.y = Phaser.Math.Clamp(this.p2.y + Math.sin(angle) * spd, 100, H - 80);
+    }
+    // Attack
+    if (dist < 90 && this.p2.attackCooldown <= 0) {
+      if (this.p2.finisher >= 100 && Math.random() < 0.7) this.doAttack(this.p2, this.p1, 'finisher');
+      else if (Math.random() < 0.5) this.doAttack(this.p2, this.p1, 'strike');
+      else this.doAttack(this.p2, this.p1, 'grapple');
+    }
+  }
+
+  startPin(winner, loser, playerWins) {
+    this.pinState = { winner, loser, playerWins, count: 0, timer: 0, mash: 0, kicked: false };
+    this.pinText = this.add.text(W/2, H/2 - 80, 'PIN!', { fontSize: '40px', fontFamily: 'monospace', color: '#FF0' }).setOrigin(0.5).setDepth(20);
+    this.pinCount = this.add.text(W/2, H/2, '', { fontSize: '60px', fontFamily: 'monospace', color: '#FFF' }).setOrigin(0.5).setDepth(20);
+    if (!playerWins) {
+      this.pinHelp = this.add.text(W/2, H/2 + 60, 'MASH SPACE TO KICK OUT!', { fontSize: '16px', fontFamily: 'monospace', color: '#0F0' }).setOrigin(0.5).setDepth(20);
+    }
+  }
+
+  updatePin(delta) {
+    const ps = this.pinState;
+    ps.timer += delta / 1000;
+    // Count
+    if (ps.timer > 1 && ps.count === 0) { ps.count = 1; this.pinCount.setText('1!'); }
+    if (ps.timer > 2 && ps.count === 1) { ps.count = 2; this.pinCount.setText('2!'); }
+    if (ps.timer > 3 && ps.count === 2) { ps.count = 3; this.pinCount.setText('3!'); this.endMatch(ps.playerWins); return; }
+
+    // Kickout
+    if (!ps.playerWins && Phaser.Input.Keyboard.JustDown(this.keys.SPACE)) {
+      ps.mash += 15;
+      if (ps.mash > 80 && ps.count < 3) {
+        this.showText('KICKOUT!', W/2, H/2, '#0F0');
+        this.pinText.destroy(); this.pinCount.destroy(); if(this.pinHelp) this.pinHelp.destroy();
+        this.pinState = null;
+        ps.loser.hp = 15;
+        ps.loser.stunTimer = 0;
+      }
+    }
+  }
+
+  endMatch(playerWins) {
+    this.gameOver = true;
+    const winner = playerWins ? WRESTLERS[this.pIdx] : WRESTLERS[this.aIdx];
+    this.time.delayedCall(1000, () => this.scene.start('Victory', { winner: winner.name, color: Phaser.Display.Color.IntegerToColor(winner.color).rgba }));
+  }
+}
+
+class VictoryScene extends Phaser.Scene {
+  constructor() { super('Victory'); }
+  init(data) { this.winner = data.winner; }
+  create() {
+    this.cameras.main.setBackgroundColor('#0a0a0a');
+    this.add.text(W/2, 150, '🏆 WINNER 🏆', { fontSize: '40px', fontFamily: 'monospace', color: '#FFD700' }).setOrigin(0.5);
+    this.add.text(W/2, 230, this.winner, { fontSize: '48px', fontFamily: 'monospace', color: '#00FF00', stroke: '#003300', strokeThickness: 4 }).setOrigin(0.5);
+    const btn = this.add.text(W/2, 370, '[ PLAY AGAIN ]', { fontSize: '24px', fontFamily: 'monospace', color: '#FF69B4' }).setOrigin(0.5).setInteractive();
+    btn.on('pointerdown', () => this.scene.start('Select'));
+    this.input.keyboard.on('keydown', () => this.scene.start('Select'));
+  }
+}
+
+new Phaser.Game({
+  type: Phaser.AUTO,
+  width: W,
+  height: H,
+  scene: [TitleScene, SelectScene, FightScene, VictoryScene],
+  parent: document.body,
+  scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH }
+});
+</script>
+</body>
+</html>
