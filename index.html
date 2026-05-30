@@ -46,9 +46,23 @@ class TitleScene extends Phaser.Scene {
     this.p1Gfx=this.add.graphics();this.p2Gfx=this.add.graphics();
     this.drawPreview(this.p1Gfx,200,350,this.selectedP1);
     this.drawPreview(this.p2Gfx,600,350,this.selectedP2);
-    this.add.text(400,500,'LEFT/RIGHT = select fighter | A/D = select opponent\nENTER to fight!',{fontSize:'14px',color:'#ccc',align:'center'}).setOrigin(0.5);
-    this.add.text(790,590,'v0.6',{fontSize:'12px',color:'#666'}).setOrigin(1);
+    this.add.text(400,500,'LEFT/RIGHT = select fighter | A/D = select opponent\\nENTER or tap FIGHT!',{fontSize:'14px',color:'#ccc',align:'center'}).setOrigin(0.5);
+    this.add.text(790,590,'v0.7',{fontSize:'12px',color:'#666'}).setOrigin(1);
     this.add.text(400,550,'Controls: Arrows=Move Z=Strike X=Grapple C=Finisher DOWN=Block',{fontSize:'12px',color:'#888'}).setOrigin(0.5);
+    // Touch buttons for select screen
+    const prevP1=this.add.text(80,200,'◀',{fontSize:'36px',color:'#0f0'}).setOrigin(0.5).setInteractive({useHandCursor:true});
+    const nextP1=this.add.text(320,200,'▶',{fontSize:'36px',color:'#0f0'}).setOrigin(0.5).setInteractive({useHandCursor:true});
+    const prevP2=this.add.text(480,200,'◀',{fontSize:'36px',color:'#f80'}).setOrigin(0.5).setInteractive({useHandCursor:true});
+    const nextP2=this.add.text(720,200,'▶',{fontSize:'36px',color:'#f80'}).setOrigin(0.5).setInteractive({useHandCursor:true});
+    prevP1.on('pointerdown',()=>{this.selectedP1=(this.selectedP1+ROSTER.length-1)%ROSTER.length;this.updateDisplay();});
+    nextP1.on('pointerdown',()=>{this.selectedP1=(this.selectedP1+1)%ROSTER.length;this.updateDisplay();});
+    prevP2.on('pointerdown',()=>{this.selectedP2=(this.selectedP2+ROSTER.length-1)%ROSTER.length;this.updateDisplay();});
+    nextP2.on('pointerdown',()=>{this.selectedP2=(this.selectedP2+1)%ROSTER.length;this.updateDisplay();});
+    const fightBtn=this.add.text(400,460,'[ FIGHT! ]',{fontSize:'28px',color:'#f00',backgroundColor:'#333',padding:{x:20,y:10}}).setOrigin(0.5).setInteractive({useHandCursor:true});
+    fightBtn.on('pointerdown',()=>{
+      if(this.started)return;this.started=true;
+      this.scene.start('FightScene',{p1:this.selectedP1,p2:this.selectedP2});
+    });
     this.input.keyboard.on('keydown-LEFT',()=>{this.selectedP1=(this.selectedP1+ROSTER.length-1)%ROSTER.length;this.updateDisplay()});
     this.input.keyboard.on('keydown-RIGHT',()=>{this.selectedP1=(this.selectedP1+1)%ROSTER.length;this.updateDisplay()});
     this.input.keyboard.on('keydown-A',()=>{this.selectedP2=(this.selectedP2+ROSTER.length-1)%ROSTER.length;this.updateDisplay()});
