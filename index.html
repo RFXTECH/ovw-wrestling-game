@@ -291,20 +291,21 @@ class FightScene extends Phaser.Scene {
     }
   }
   endRound(p1Won){
-    this.gameOver=true;
+    this.gameOver=true;this.pinActive=false;this.pinGfx.setVisible(false);this.pinText.setVisible(false);
     if(p1Won)this.p1Wins++;else this.p2Wins++;
     const msg=p1Won?ROSTER[this.p1Idx].name+' wins the round!':ROSTER[this.p2Idx].name+' wins the round!';
     this.add.text(400,200,msg,{fontSize:'28px',color:'#ff0',backgroundColor:'#000a'}).setOrigin(0.5);
     if(this.p1Wins>=2||this.p2Wins>=2){
       const winner=this.p1Wins>=2?ROSTER[this.p1Idx].name:ROSTER[this.p2Idx].name;
       this.add.text(400,240,winner+' WINS THE MATCH!',{fontSize:'24px',color:'#0f0'}).setOrigin(0.5);
-      this.add.text(400,280,'ENTER to return',{fontSize:'16px',color:'#ccc'}).setOrigin(0.5);
+      const rb=this.add.text(400,280,'[ TAP TO CONTINUE ]',{fontSize:'18px',color:'#ccc',backgroundColor:'#333',padding:{x:12,y:6}}).setOrigin(0.5).setInteractive();
+      rb.on('pointerdown',()=>{this.scene.start('TitleScene');});
       this.input.keyboard.once('keydown-ENTER',()=>{this.scene.start('TitleScene');});
     } else {
-      this.add.text(400,240,'ENTER for next round',{fontSize:'16px',color:'#ccc'}).setOrigin(0.5);
-      this.input.keyboard.once('keydown-ENTER',()=>{
-        this.scene.start('FightScene',{p1:this.p1Idx,p2:this.p2Idx,p1Wins:this.p1Wins,p2Wins:this.p2Wins,round:this.round});
-      });
+      const nb=this.add.text(400,240,'[ TAP FOR NEXT ROUND ]',{fontSize:'18px',color:'#ccc',backgroundColor:'#333',padding:{x:12,y:6}}).setOrigin(0.5).setInteractive();
+      const goNext=()=>{this.scene.start('FightScene',{p1:this.p1Idx,p2:this.p2Idx,p1Wins:this.p1Wins,p2Wins:this.p2Wins,round:this.round});};
+      nb.on('pointerdown',goNext);
+      this.input.keyboard.once('keydown-ENTER',goNext);
     }
   }
   drawHUD(){
