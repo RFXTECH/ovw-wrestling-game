@@ -14,6 +14,9 @@
 </style>
 <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
 </head><body><script>
+// Global touch input state (touch buttons set these, game reads them)
+const TOUCH={left:false,right:false,up:false,down:false,z:false,x:false,c:false,space:false};
+
 const ROSTER = [
   {name:'Z-Force',style:'Champion',pow:7,spd:7,sta:7,tec:7,c1:0xffd700,c2:0xffa500},
   {name:'Big Zo',style:'Powerhouse',pow:10,spd:4,sta:8,tec:5,c1:0x8b0000,c2:0xff0000},
@@ -47,7 +50,7 @@ class TitleScene extends Phaser.Scene {
     this.drawPreview(this.p1Gfx,200,350,this.selectedP1);
     this.drawPreview(this.p2Gfx,600,350,this.selectedP2);
     this.add.text(400,500,'LEFT/RIGHT = select fighter | A/D = select opponent\\nENTER or tap FIGHT!',{fontSize:'14px',color:'#ccc',align:'center'}).setOrigin(0.5);
-    this.add.text(790,590,'v0.7',{fontSize:'12px',color:'#666'}).setOrigin(1);
+    this.add.text(790,590,'v0.8',{fontSize:'12px',color:'#666'}).setOrigin(1);
     this.add.text(400,550,'Controls: Arrows=Move Z=Strike X=Grapple C=Finisher DOWN=Block',{fontSize:'12px',color:'#888'}).setOrigin(0.5);
     // Touch buttons for select screen
     const prevP1=this.add.text(80,200,'◀',{fontSize:'36px',color:'#0f0'}).setOrigin(0.5).setInteractive({useHandCursor:true});
@@ -102,7 +105,7 @@ class FightScene extends Phaser.Scene {
     this.gameOver=false;this.aiTimer=0;this.aiAction=null;this.aiDashCooldown=0;
     this.cursors=this.input.keyboard.createCursorKeys();
     this.keys={z:this.input.keyboard.addKey('Z'),x:this.input.keyboard.addKey('X'),c:this.input.keyboard.addKey('C'),space:this.input.keyboard.addKey('SPACE')};
-    this.cooldown=0;
+    this.cooldown=0;this.touchSpaceJust=false;
     this.floatingTexts=[];
     this.add.text(400,30,'Round '+this.round+' of 3',{fontSize:'16px',color:'#fff'}).setOrigin(0.5);
     this.add.text(400,50,this.p1Wins+' - '+this.p2Wins,{fontSize:'14px',color:'#ff0'}).setOrigin(0.5);
@@ -166,20 +169,20 @@ class FightScene extends Phaser.Scene {
     // Player input
     this.cooldown-=delta;
     const spd=this.p1.data.spd*0.4+1;
-    this.p1.blocking=this.cursors.down.isDown;
+    this.p1.blocking=this.cursors.down.isDown||TOUCH.down;
     if(!this.p1.blocking){
-      if(this.cursors.left.isDown){this.p1.x-=spd;this.p1.facingRight=false;}
-      if(this.cursors.right.isDown){this.p1.x+=spd;this.p1.facingRight=true;}
-      if(this.cursors.up.isDown)this.p1.y-=spd*0.5;
-      if(this.cursors.down.isDown)this.p1.y+=spd*0.5;
+      if(this.cursors.left.isDown||TOUCH.left){this.p1.x-=spd;this.p1.facingRight=false;}
+      if(this.cursors.right.isDown||TOUCH.right){this.p1.x+=spd;this.p1.facingRight=true;}
+      if(this.cursors.up.isDown||TOUCH.up)this.p1.y-=spd*0.5;
+      if(this.cursors.down.isDown||TOUCH.down)this.p1.y+=spd*0.5;
     }
     this.p1.x=Phaser.Math.Clamp(this.p1.x,170,630);
     this.p1.y=Phaser.Math.Clamp(this.p1.y,280,440);
     // Attacks
     if(this.cooldown<=0){
-      if(this.keys.z.isDown&&this.p1.stamina>=10){this.doAttack(this.p1,this.p2,'strike');this.cooldown=300;}
-      else if(this.keys.x.isDown&&this.p1.stamina>=20){this.doAttack(this.p1,this.p2,'grapple');this.cooldown=500;}
-      else if(this.keys.c.isDown&&this.p1.finisher>=100){this.doAttack(this.p1,this.p2,'finisher');this.cooldown=800;}
+      if((this.keys.z.isDown||TOUCH.z)&&this.p1.stamina>=10){this.doAttack(this.p1,this.p2,'strike');this.cooldown=300;}
+      else if((this.keys.x.isDown||TOUCH.x)&&this.p1.stamina>=20){this.doAttack(this.p1,this.p2,'grapple');this.cooldown=500;}
+      else if((this.keys.c.isDown||TOUCH.c)&&this.p1.finisher>=100){this.doAttack(this.p1,this.p2,'finisher');this.cooldown=800;}
     }
     // AI
     this.updateAI(delta);
@@ -266,7 +269,8 @@ class FightScene extends Phaser.Scene {
     this.pinCount+=delta;
     if(this.pinTarget===this.p1){
       // Player must kick out
-      if(Phaser.Input.Keyboard.JustDown(this.keys.space)){
+      if(Phaser.Input.Keyboard.JustDown(this.keys.space)||this.touchSpaceJust){
+        this.touchSpaceJust=false;
         if(Math.abs(this.pinMarker-zoneCenter)<zoneSize/2){
           // Kicked out!
           this.pinActive=false;this.pinGfx.setVisible(false);this.pinText.setVisible(false);
@@ -352,17 +356,17 @@ new Phaser.Game(config);
 </script>
 <div id="touch-controls">
   <div class="dpad">
-    <button class="up" data-key="ArrowUp">▲</button>
-    <button class="left" data-key="ArrowLeft">◀</button>
-    <button class="right" data-key="ArrowRight">▶</button>
-    <button class="down" data-key="ArrowDown">▼</button>
+    <button class="up" data-key="up">▲</button>
+    <button class="left" data-key="left">◀</button>
+    <button class="right" data-key="right">▶</button>
+    <button class="down" data-key="down">▼</button>
   </div>
   <div class="actions">
     <button class="btn-z" data-key="z">Z<br>Strike</button>
     <button class="btn-x" data-key="x">X<br>Grab</button>
     <button class="btn-c" data-key="c">C<br>Finish</button>
-    <button class="btn-block" data-key="ArrowDown">BLK</button>
-    <button class="btn-space" data-key=" ">SPACE</button>
+    <button class="btn-block" data-key="down">BLK</button>
+    <button class="btn-space" data-key="space">SPACE</button>
   </div>
 </div>
 <script>
@@ -370,22 +374,24 @@ new Phaser.Game(config);
 if('ontouchstart' in window || navigator.maxTouchPoints>0){
   document.getElementById('touch-controls').classList.add('active');
 }
-// Wire touch buttons to keyboard events
+// Wire touch buttons to TOUCH state object
 document.querySelectorAll('#touch-controls button').forEach(btn=>{
   const key=btn.dataset.key;
-  const sendKey=(type)=>{
-    const ev=new KeyboardEvent(type,{key,code:key.length===1?'Key'+key.toUpperCase():key,bubbles:true});
-    document.dispatchEvent(ev);
-    const canvas=document.querySelector('canvas');
-    if(canvas)canvas.dispatchEvent(ev);
+  const setOn=()=>{
+    TOUCH[key]=true;
+    if(key==='space'){
+      // Set JustDown flag for pin minigame
+      const game=Phaser.GAMES?Phaser.GAMES[0]:null;
+      if(game){const s=game.scene.getScene('FightScene');if(s&&s.sys.isActive())s.touchSpaceJust=true;}
+    }
   };
-  btn.addEventListener('touchstart',(e)=>{e.preventDefault();sendKey('keydown');btn.dataset.held='1';});
-  btn.addEventListener('touchend',(e)=>{e.preventDefault();sendKey('keyup');btn.dataset.held='0';});
-  btn.addEventListener('touchcancel',(e)=>{e.preventDefault();sendKey('keyup');btn.dataset.held='0';});
-  // Mouse fallback
-  btn.addEventListener('mousedown',(e)=>{e.preventDefault();sendKey('keydown');btn.dataset.held='1';});
-  btn.addEventListener('mouseup',(e)=>{e.preventDefault();sendKey('keyup');btn.dataset.held='0';});
-  btn.addEventListener('mouseleave',(e)=>{if(btn.dataset.held==='1'){sendKey('keyup');btn.dataset.held='0';}});
+  const setOff=()=>{TOUCH[key]=false;};
+  btn.addEventListener('touchstart',(e)=>{e.preventDefault();setOn();});
+  btn.addEventListener('touchend',(e)=>{e.preventDefault();setOff();});
+  btn.addEventListener('touchcancel',(e)=>{e.preventDefault();setOff();});
+  btn.addEventListener('mousedown',(e)=>{e.preventDefault();setOn();});
+  btn.addEventListener('mouseup',(e)=>{e.preventDefault();setOff();});
+  btn.addEventListener('mouseleave',(e)=>{setOff();});
 });
 </script>
 </body></html>
