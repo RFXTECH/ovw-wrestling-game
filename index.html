@@ -27,6 +27,7 @@ const WRESTLERS = [
 ];
 
 const W = 800, H = 550;
+const VERSION = 'v0.3';
 
 class TitleScene extends Phaser.Scene {
   constructor() { super('Title'); }
@@ -38,6 +39,7 @@ class TitleScene extends Phaser.Scene {
     this.add.text(W/2, 300, '[ START ]', { fontSize: '32px', fontFamily: 'monospace', color: '#00FF00', padding: { x: 20, y: 10 }, backgroundColor: '#222' }).setOrigin(0.5);
     this.add.text(W/2, 360, '(Click or tap anywhere)', { fontSize: '14px', fontFamily: 'monospace', color: '#666' }).setOrigin(0.5);
     this.add.text(W/2, 450, 'Controls: Arrows=Move  Z=Strike  X=Grapple  C=Finisher', { fontSize: '14px', fontFamily: 'monospace', color: '#888' }).setOrigin(0.5);
+    this.add.text(W - 10, H - 10, VERSION, { fontSize: '11px', fontFamily: 'monospace', color: '#444' }).setOrigin(1, 1);
     this.tweens.add({ targets: t, scaleX: 1.05, scaleY: 1.05, yoyo: true, repeat: -1, duration: 800 });
     const goToSelect = () => { if (!this.started) { this.started = true; this.scene.start('Select'); } };
     this.input.keyboard.on('keydown', goToSelect);
@@ -66,10 +68,10 @@ class SelectScene extends Phaser.Scene {
       c.on('pointerdown', () => { this.selected = i; this.updateSelection(); });
       this.cards.push({ container: c, bg });
     });
-    this.updateSelection();
     // Stats display
-    this.statsText = this.add.text(W/2, 430, '', { fontSize: '14px', fontFamily: 'monospace', color: '#0F0' }).setOrigin(0.5);
-    const go = this.add.text(W/2, 465, '[ FIGHT! ]', { fontSize: '22px', fontFamily: 'monospace', color: '#FF4500' }).setOrigin(0.5).setInteractive();
+    this.statsText = this.add.text(W/2, 460, '', { fontSize: '14px', fontFamily: 'monospace', color: '#0F0' }).setOrigin(0.5);
+    this.updateSelection();
+    const go = this.add.text(W/2, 495, '[ FIGHT! ]', { fontSize: '22px', fontFamily: 'monospace', color: '#FF4500' }).setOrigin(0.5).setInteractive();
     go.on('pointerdown', () => this.scene.start('Fight', { player: this.selected, ai: this.getAI() }));
     this.input.keyboard.on('keydown-ENTER', () => this.scene.start('Fight', { player: this.selected, ai: this.getAI() }));
   }
