@@ -20,10 +20,13 @@ const WRESTLERS = [
   { name: 'Freya The Slaya', title: 'Aggressive', power: 8, speed: 8, stamina: 6, technique: 6, color: 0xFF1493, bodyW: 36, bodyH: 56, accent: 0xFF69B4 },
   { name: 'Crixus', title: 'Brawler', power: 9, speed: 5, stamina: 9, technique: 5, color: 0x556B2F, bodyW: 50, bodyH: 62, accent: 0x8FBC8F },
   { name: 'Ca$h Flo', title: 'Technical', power: 5, speed: 7, stamina: 6, technique: 10, color: 0x00FF00, bodyW: 38, bodyH: 57, accent: 0x32CD32 },
-  { name: 'Mad Dog Martin', title: 'Unpredictable', power: 8, speed: 8, stamina: 5, technique: 4, color: 0xFF4500, bodyW: 44, bodyH: 60, accent: 0xFF6347 }
+  { name: 'Mad Dog Martin', title: 'Unpredictable', power: 8, speed: 8, stamina: 5, technique: 4, color: 0xFF4500, bodyW: 44, bodyH: 60, accent: 0xFF6347 },
+  { name: 'Oaken', title: 'Iron Oak', power: 9, speed: 6, stamina: 10, technique: 6, color: 0x8B4513, bodyW: 48, bodyH: 63, accent: 0xD2691E },
+  { name: 'Arlo', title: 'The Flash', power: 6, speed: 10, stamina: 7, technique: 8, color: 0x1E90FF, bodyW: 36, bodyH: 54, accent: 0x00CED1 },
+  { name: 'Theo', title: 'Wildcard', power: 7, speed: 9, stamina: 6, technique: 9, color: 0x9932CC, bodyW: 38, bodyH: 56, accent: 0xBA55D3 }
 ];
 
-const W = 800, H = 500;
+const W = 800, H = 550;
 
 class TitleScene extends Phaser.Scene {
   constructor() { super('Title'); }
@@ -31,11 +34,12 @@ class TitleScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor('#0a0a0a');
     const t = this.add.text(W/2, 120, 'OVW SMASH', { fontSize: '64px', fontFamily: 'monospace', color: '#FFD700', stroke: '#FF4500', strokeThickness: 6 }).setOrigin(0.5);
     this.add.text(W/2, 180, '🤼 WRESTLING ARCADE 🤼', { fontSize: '18px', fontFamily: 'monospace', color: '#FF69B4' }).setOrigin(0.5);
-    const btn = this.add.text(W/2, 300, '[ START ]', { fontSize: '32px', fontFamily: 'monospace', color: '#00FF00' }).setOrigin(0.5).setInteractive();
-    btn.on('pointerdown', () => this.scene.start('Select'));
+    const btn = this.add.text(W/2, 300, '[ START ]', { fontSize: '32px', fontFamily: 'monospace', color: '#00FF00', padding: { x: 20, y: 10 }, backgroundColor: '#222' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    btn.on('pointerup', () => this.scene.start('Select'));
     this.add.text(W/2, 420, 'Controls: Arrows=Move  Z=Strike  X=Grapple  C=Finisher', { fontSize: '14px', fontFamily: 'monospace', color: '#888' }).setOrigin(0.5);
     this.tweens.add({ targets: t, scaleX: 1.05, scaleY: 1.05, yoyo: true, repeat: -1, duration: 800 });
     this.input.keyboard.on('keydown', () => this.scene.start('Select'));
+    this.input.on('pointerup', () => this.scene.start('Select'));
   }
 }
 
@@ -46,8 +50,9 @@ class SelectScene extends Phaser.Scene {
     this.add.text(W/2, 30, 'SELECT YOUR WRESTLER', { fontSize: '24px', fontFamily: 'monospace', color: '#FFD700' }).setOrigin(0.5);
     this.selected = 0;
     this.cards = [];
+    const cols = 4;
     WRESTLERS.forEach((w, i) => {
-      const x = 100 + (i % 4) * 175, y = 100 + Math.floor(i / 4) * 160;
+      const x = 100 + (i % cols) * 175, y = 80 + Math.floor(i / cols) * 130;
       const c = this.add.container(x, y);
       const bg = this.add.rectangle(0, 0, 150, 130, 0x222222).setStrokeStyle(2, w.color);
       const body = this.add.rectangle(0, -15, w.bodyW * 0.6, w.bodyH * 0.6, w.color);
@@ -66,7 +71,7 @@ class SelectScene extends Phaser.Scene {
     go.on('pointerdown', () => this.scene.start('Fight', { player: this.selected, ai: this.getAI() }));
     this.input.keyboard.on('keydown-ENTER', () => this.scene.start('Fight', { player: this.selected, ai: this.getAI() }));
   }
-  getAI() { let a; do { a = Phaser.Math.Between(0, 7); } while(a === this.selected); return a; }
+  getAI() { let a; do { a = Phaser.Math.Between(0, WRESTLERS.length - 1); } while(a === this.selected); return a; }
   updateSelection() {
     this.cards.forEach((c, i) => c.bg.setStrokeStyle(i === this.selected ? 4 : 2, i === this.selected ? 0x00FF00 : WRESTLERS[i].color));
     const w = WRESTLERS[this.selected];
